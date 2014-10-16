@@ -1,0 +1,30 @@
+﻿#pragma kernel CSMain
+
+StructuredBuffer<float4x4> mvpMatrix;
+StructuredBuffer<float4> trajectoryPositions;
+
+RWStructuredBuffer<float4> positions;
+
+float screenWidth;
+float screenHeight;
+float extraWurst;
+float maximumScreenSpeed;
+
+[numthreads(64,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    float4 p = positions[id.x];
+	float4 t = trajectoryPositions[id.x];
+	float2 screenSize = float2(screenWidth, -screenHeight);
+	
+	float4 sp = mul(mvpMatrix[0], p);
+	sp /= sp.w;	
+	
+	float4 sv = mul(mvpMatrix[0], t);
+	sv /= sv.w;	
+	
+	float dpx = distance(sp.xy * screenSize, sv.xy * screenSize);	
+	float speedReduction = (sp.x > -1 && sp.x < 1 && sp.y > -1 && sp.y < 1 && sp.z > 0 && dpx > maximumScreenSpeed) ? (maximumScreenSpeed / dpx + extraWurst) : 1;
+
+    positions[id.x] = p + (t-p) * speedReduction;    
+}

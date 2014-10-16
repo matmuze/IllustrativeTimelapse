@@ -1,0 +1,271 @@
+//
+//using System;
+//public static class ReactionDataProcessor
+//{
+//	public FileStream fileStream;
+//	
+//	public static void ReadReactionData()
+//	{
+//		// Read reaction data
+//		List<ReactionData> reactionList = new List<ReactionData>();
+//		
+//		StreamReader reader = File.OpenText(rxn_data_path);
+//		string line;
+//		
+//		while ((line = reader.ReadLine()) != null)
+//		{
+//			string[] fields = line.Split(' ');
+//			
+//			ReactionData reactionData = new ReactionData();
+//			reactionData.frame = int.Parse(fields[0]);
+//			
+//			if(reactionData.frame >= frameCount) break;
+//			
+//			reactionData.time = float.Parse(fields[1]);
+//			reactionData.position = Quaternion.Euler(-90,0,0) * new Vector3(-float.Parse(fields[2]), float.Parse(fields[3]), -float.Parse(fields[4])) * SCALING_FACTOR;
+//			reactionData.position.y *= -1;
+//			reactionData.type = fields[5];
+//			reactionData.reactants = new int[2];
+//			reactionData.products = new int[1];
+//			
+//			reactionList.Add(reactionData);
+//		}		
+//		reactions = reactionList.ToArray();
+//		
+//		BuildReactionMaps();
+//		
+//		for(int i = 1; i < reactionFrameStart.Length; i++)
+//		{
+//			if(reactionFrameStart[i] == -1) continue;
+//			
+//			int NUM_REACTIONS = (reactionFrameEnd[i] - reactionFrameStart[i]) + 1;			
+//			Debug.Log ("Frame: " + i + " Reaction count: " + NUM_REACTIONS);
+//			
+//			var previousFrameData = LoadFrameData(i-1).ToList();
+//			var reactionFrameData = LoadFrameData(i).ToList();	
+//			
+//			int[] previousSortedIDs = previousFrameData.Select(e => e.id).ToArray();
+//			int[] reactionSortedIDs = reactionFrameData.Select(e => e.id).ToArray();
+//			
+//			List<int> reactants = new List<int>();
+//			for(int j = 0; j < NUM_REACTIONS; j++) 
+//			{
+//				reactants.Add(-1);
+//			}
+//			
+//			List<int> products = new List<int>();
+//			for(int j = 0; j < NUM_REACTIONS; j++) 
+//			{
+//				products.Add(-1);
+//			}
+//			
+//			List<int> partners = new List<int>();
+//			for(int j = 0; j < NUM_REACTIONS; j++) 
+//			{
+//				partners.Add(-1);
+//			}
+//			
+//			// Find reactants
+//			
+//			int a = 0;
+//			int b = 0;
+//			int c = 0;
+//			
+//			while(a < previousSortedIDs.Length)
+//			{
+//				while(b < reactionSortedIDs.Length)
+//				{
+//					if(previousSortedIDs[a] == reactionSortedIDs[b]) 
+//					{
+//						b++;
+//						break;
+//					}
+//					
+//					if(previousSortedIDs[a] < reactionSortedIDs[b])
+//					{
+//						int ind = -1;
+//						
+//						int reactant = previousSortedIDs[a];
+//						int reactantIndex = previousFrameData.FindIndex( e => e.id == reactant);
+//						
+//						float reactionDistance = float.MaxValue;
+//						int reaction = -1;
+//						
+//						for(int j = 0; j < NUM_REACTIONS; j++)
+//						{
+//							if(reactants[j] != -1) continue;
+//							
+//							ind = reactionFrameStart[i]+j;
+//							
+//							float d = Vector3.Distance(previousFrameData[reactantIndex].position, reactions[ind].position);
+//							if(d < reactionDistance)
+//							{
+//								reactionDistance = d;
+//								reaction = j;
+//							}
+//						}
+//						
+//						reactants[reaction] = reactant;
+//						//						Debug.Log("Reactant reaction distance: " + reactionDistance);
+//						
+//						c++;
+//						break;
+//					}
+//					b++;
+//				}
+//				a++;
+//			}
+//			
+//			if(c != NUM_REACTIONS)
+//			{
+//				Debug.LogError("Some fucked up thing just happened");
+//			}
+//			
+//			if(reactants.Contains(-1))
+//			{
+//				Debug.LogError("Found empty entries in reactants");
+//			}
+//			
+//			if(reactants.Distinct().Count() != reactants.Count())
+//			{
+//				Debug.LogError("Found duplicates in reactants");
+//			}
+//			
+//			// Find products
+//			
+//			a = reactionSortedIDs.Length-1;
+//			b = previousSortedIDs.Length-1;
+//			c = 0;
+//			
+//			while(a > 0)
+//			{
+//				while(b > 0)
+//				{
+//					if(reactionSortedIDs[a] == previousSortedIDs[b]) 
+//					{
+//						b--;
+//						break;
+//					}
+//					
+//					if(reactionSortedIDs[a] > previousSortedIDs[b])
+//					{
+//						int ind = -1;
+//						
+//						int product = reactionSortedIDs[a];
+//						int productIndex = reactionFrameData.FindIndex( e => e.id == product);
+//						
+//						float reactionDistance = float.MaxValue;
+//						int reaction = -1;
+//						
+//						for(int j = 0; j < NUM_REACTIONS; j++)
+//						{
+//							if(products[j] != -1) continue;
+//							
+//							ind = reactionFrameStart[i]+j;
+//							
+//							float d = Vector3.Distance(reactionFrameData[productIndex].position, reactions[ind].position);
+//							if(d < reactionDistance)
+//							{
+//								reactionDistance = d;
+//								reaction = j;
+//							}
+//						}
+//						
+//						products[reaction] = product;
+//						//						Debug.Log("Product reaction distance: " + reactionDistance);
+//						
+//						c++;
+//						break;
+//					}					
+//					b--;
+//				}				
+//				a--;
+//			}	
+//			
+//			if(c != NUM_REACTIONS)
+//			{
+//				Debug.LogError("Some fucked up thing just happened");
+//			}
+//			
+//			if(products.Contains(-1))
+//			{
+//				Debug.LogError("Found empty entries in products");
+//			}
+//			
+//			if(products.Distinct().Count() != products.Count())
+//			{
+//				Debug.LogError("Found duplicates in products");
+//			}
+//			
+//			// Find partners
+//			
+//			for(int j = 0; j < NUM_REACTIONS; j++)
+//			{
+//				int partner = -1;
+//				float partnerDistance = float.MaxValue;
+//				
+//				int ind = reactionFrameStart[i]+j;
+//				
+//				for(int kk = 0; kk < previousFrameData.Count; ++kk)
+//				{
+//					if(previousFrameData[kk].type != 2) continue;
+//					if(partners.Contains(previousFrameData[kk].id)) continue;
+//					
+//					float d = Vector3.Distance(previousFrameData[kk].position, reactions[ind].position);
+//					
+//					if(d < partnerDistance)
+//					{
+//						partner = previousFrameData[kk].id;
+//						partnerDistance = d;
+//					}
+//				}	
+//				partners[j] = partner;
+//				//				Debug.Log("Partner reaction distance: " + partnerDistance);
+//			}
+//			
+//			if(partners.Contains(-1))
+//			{
+//				Debug.LogError("Found empty entries in partners");
+//			}
+//			
+//			if(partners.Distinct().Count() != partners.Count())
+//			{
+//				Debug.LogError("Found duplicates in partners");
+//			}
+//			
+//			for(int j = 0; j < NUM_REACTIONS; j++)
+//			{
+//				int ind = reactionFrameStart[i]+j;
+//				
+//				reactions[ind].reactants[0] = reactants[j];
+//				reactions[ind].reactants[1] = partners[j];
+//				reactions[ind].products[0] = products[j];
+//				
+//				Debug.Log("Reaction: " + ind + " reactant: " + reactants[j] + " partner: " + partners[j] + " product: " + products[j]);
+//			}
+//		}
+//		
+//		var serializer = new XmlSerializer(typeof(ReactionData[]));
+//		var stream = new FileStream(Path.Combine(Application.persistentDataPath, "reactions.xml"), FileMode.Create);
+//		serializer.Serialize(stream, reactions);
+//		stream.Close();
+//	}
+//	
+//	void BuildReactionMaps()
+//	{
+//		for(int i = 0; i < reactions.Length; i++)
+//		{
+//			if(reactionFrameStart[reactions[i].frame] == -1)
+//			{
+//				reactionFrameStart[reactions[i].frame] = i;
+//				reactionFrameEnd[reactions[i].frame] = i;
+//			}
+//			else
+//			{
+//				reactionFrameEnd[reactions[i].frame] ++;
+//			}
+//		}
+//	}
+//	
+//
+//}
